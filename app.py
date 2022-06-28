@@ -1,19 +1,20 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 # from wtforms import Form, TextAreaField, validators
 import pickle
-from wtforms import Form, TextAreaField, validators
 import os
-import numpy as np
-from vectorizer import vect
 
-from flask_app import clf
+
+# from vectorizer import vect
+
 
 app = Flask(__name__)
+""" Form Handling 
+
 
 cur_dir = os.path.dirname(__file__)
 cv = pickle.load(open(os.path.join(cur_dir,'pkl_objects','Personality_Prediction.pkl'), 'rb'))
 
-######## Flask
+
 class ReviewForm(Form):
     personality = TextAreaField('',[validators.DataRequired(),validators.length(min=15)])
 def classify(document):
@@ -34,7 +35,7 @@ def results():
                                 prediction=y,
                                 probability=round(proba*100, 2))
     return render_template('personality.html', form=form)
-
+"""
 
 ######## Preparing the Classifier
 # cur_dir = os.path.dirname(__file__)
@@ -77,7 +78,6 @@ def index():
 def about():
     if request.method == 'POST':
         # do stuff when the form is submitted
-
         # redirect to end the POST handling
         # the redirect can be to the same route or somewhere else
         return redirect(url_for('index'))

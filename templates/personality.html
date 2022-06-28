@@ -31,13 +31,13 @@
 </table>
 <br><br><br><br><br>
 
-{% from "_formhelper.html" import render_field %}
+{#{% from "_formhelper.html" import render_field %}#}
 
     <div style="margin-left: 15rem" >
         <form method="POST" action="/results">
-            <dl>
-                {{ render_field(form.personality, cols='100', rows='20') }}
-            </dl>
+{#            <dl>#}
+{#                {{ render_field(form.personality, cols='100', rows='20') }}#}
+{#            </dl>#}
               <textarea name="personality" id="" cols="100" rows="20"></textarea>
                 <br>
             <label>
