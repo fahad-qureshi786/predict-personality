@@ -1,10 +1,39 @@
 from flask import Flask, render_template, request
 # from wtforms import Form, TextAreaField, validators
 import pickle
-import sqlite3
+from wtforms import Form, TextAreaField, validators
 import os
+import numpy as np
+from vectorizer import vect
+
+from flask_app import clf
 
 app = Flask(__name__)
+
+cur_dir = os.path.dirname(__file__)
+cv = pickle.load(open(os.path.join(cur_dir,'pkl_objects','Personality_Prediction.pkl'), 'rb'))
+
+######## Flask
+class ReviewForm(Form):
+    personality = TextAreaField('',[validators.DataRequired(),validators.length(min=15)])
+def classify(document):
+    label = {'INFJ', 'ENTP', 'INTP', 'INTJ', 'ENTJ', 'ENFJ', 'INFP', 'ENFP',
+       'ISFP', 'ISTP', 'ISFJ', 'ISTJ', 'ESTP', 'ESFP', 'ESTJ', 'ESFJ'}
+    X = vect.transform([document])
+    y = clf.predict(X)[0]
+    proba = np.max(clf.predict_proba(X))
+    return label[y], proba
+
+@app.route('/results', methods=['POST'])
+def results():
+    form = ReviewForm(request.form)
+    if request.method == 'POST' and form.validate():
+        personality = request.form['personality']
+        y, proba = classify(personality)
+        return render_template('results.html',content=personality,
+                                prediction=y,
+                                probability=round(proba*100, 2))
+    return render_template('personality.html', form=form)
 
 
 ######## Preparing the Classifier
