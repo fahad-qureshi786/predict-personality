@@ -19,5 +19,199 @@
     <td width="10%" align="center"> <a href="/personality">Perform Experiments</a></td>
 </tr>
 </table><br><br><br><br><br><br><br>
+
+
+<textarea name="code" style="color:black; background-color: white" id="" cols="100" rows="200" disabled>import numpy as np
+import pandas as pd
+
+from nltk.corpus import stopwords
+
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+from sklearn.model_selection import train_test_split
+
+import tensorflow as tf
+import nltk
+nltk.download('stopwords')
+data = pd.read_csv('/content/drive/MyDrive/Datasets/mbti_1.csv')
+
+data.info()
+data['type'].unique()
+import re
+from gensim.parsing.preprocessing import remove_stopwords
+from string import digits
+import string
+import re
+
+texts = data['posts'].copy()
+stop_words = stopwords.words('english')
+texts = [text.lower() for text in texts]
+texts = [re.sub(r'''(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))''', '', text, flags=re.MULTILINE)  for text in texts]
+texts = [text.translate(str.maketrans('', '', string.punctuation)) for text in texts]
+texts = [text.translate(remove_digits) for text in texts]
+texts = [remove_stopwords(text) for text in texts]
+texts = [text.split() for text in texts]
+texts = [[word.strip() for word in text] for text in texts]
+texts = [[lemmatizer.lemmatize(word) for word in text] for text in texts]
+
+texts[5]
+# import nltk
+# nltk.download('stopwords')
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+from nltk.stem import WordNetLemmatizer
+
+lemmatizer=WordNetLemmatizer()
+
+texts = [[lemmatizer.lemmatize(word) for word in text] for text in texts]
+texts[0]
+from gensim.parsing.preprocessing import remove_stopwords
+from string import digits
+import string
+import re
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+from nltk.stem import WordNetLemmatizer
+
+
+def preprocess_inputs(df):
+
+    texts = df['posts'].copy()
+    labels = df['type'].copy()
+
+    # Process text data
+    stop_words = stopwords.words('english')
+    remove_digits = str.maketrans("","",digits)
+    lemmatizer=WordNetLemmatizer()
+
+
+    texts = [text.lower() for text in texts]
+    texts = [re.sub(r'''(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))''', '', text, flags=re.MULTILINE)  for text in texts]
+    texts = [text.translate(str.maketrans('', '', string.punctuation)) for text in texts]
+    texts = [text.translate(remove_digits) for text in texts]
+    texts = [remove_stopwords(text) for text in texts]
+    texts = [text.split() for text in texts]
+    texts = [[word.strip() for word in text] for text in texts]
+    # texts = [[word for word in text if word not in stop_words] for text in texts]
+    texts = [[lemmatizer.lemmatize(word) for word in text] for text in texts]
+
+    vocab_length = 10000
+
+    tokenizer = Tokenizer(num_words=vocab_length)
+    tokenizer.fit_on_texts(texts)
+
+    texts = tokenizer.texts_to_sequences(texts)
+
+    max_seq_length = np.max([len(text) for text in texts])
+
+    texts = pad_sequences(texts, maxlen=max_seq_length, padding='post')
+
+    # Process label data
+    label_values = [
+        'INFJ', 'ENTP', 'INTP', 'INTJ', 'ENTJ', 'ENFJ', 'INFP', 'ENFP',
+       'ISFP', 'ISTP', 'ISFJ', 'ISTJ', 'ESTP', 'ESFP', 'ESTJ', 'ESFJ'
+    ]
+
+    label_mapping = {label: np.int(label[0] == 'E') for label in label_values}
+
+    # labels = labels.replace(label_mapping)
+    # labels = np.array(labels)
+
+    return texts, labels, max_seq_length, vocab_length, label_mapping
+
+
+#Tokenizer
+
+texts, labels, max_seq_length, vocab_length, label_mapping = preprocess_inputs(data)
+from google.colab import drive
+drive.mount('/content/drive')
+print("Text sequences:\n", texts.shape)
+print("\nLabels:\n", labels)
+print("\nMax sequence length:\n", max_seq_length)
+print("\nVocab length:\n", vocab_length)
+print("\nLabel mapping:\n", label_mapping)
+from sklearn.preprocessing import LabelEncoder
+labelencoder = LabelEncoder() ;
+
+labels = labelencoder.fit_transform(labels)
+
+texts_train, texts_test, labels_train, labels_test = train_test_split(texts, labels, train_size=0.7,stratify=labels, random_state=111)
+
+unique,count = np.unique(labels_train,return_counts=True)
+print(unique)
+print(count)
+
+
+
+from keras.layers import LSTM
+from keras.models import Sequential
+from keras.layers import Bidirectional,Embedding,SimpleRNN, Flatten, Dense,Input
+
+
+
+embedding_dim = 500
+model = Sequential()
+model.add(Input(shape=(max_seq_length,)))
+model.add(Embedding(input_dim=vocab_length,
+    output_dim=embedding_dim,
+    input_length=max_seq_length))
+# model.add(LSTM(64,dropout=0.3))
+model.add(Bidirectional(LSTM(64,dropout=0.1)))
+# model.add(Dense(32, activation='relu'))
+model.add(Dense(1, activation='softmax'))
+
+model.summary()
+
+
+
+
+# embedding_dim = 512
+
+# inputs = tf.keras.Input(shape=(max_seq_length,))
+
+# embedding = tf.keras.layers.Embedding(
+#     input_dim=vocab_length,
+#     output_dim=embedding_dim,
+#     input_length=max_seq_length
+# )(inputs)
+
+# gru = tf.keras.layers.Bidirectional(
+#     tf.keras.layers.GRU(
+#         units=256,
+#         return_sequences=True
+#     )
+# )(embedding)
+
+# flatten = tf.keras.layers.Flatten()(gru)
+
+# outputs = tf.keras.layers.Dense(16, activation='sigmoid')(flatten)
+
+
+# model = tf.keras.Model(inputs, outputs)
+
+
+
+model.compile(optimizer=tf.keras.optimizers.Adam(
+  learning_rate=0.00002),
+              loss='sparse_categorical_crossentropy',
+              metrics=['acc'])
+
+
+
+history = model.fit(
+    texts_train,
+    labels_train,
+    validation_split=0.2,
+    batch_size=60,
+    epochs=10,
+    callbacks=[
+        tf.keras.callbacks.ModelCheckpoint('./model.h5', save_best_only=True, save_weights_only=True)
+    ]
+)
+
+model.evaluate(texts_test, labels_test)
+print(labels_test)
+</textarea>
 </body>
 </html>
