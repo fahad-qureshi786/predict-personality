@@ -1,41 +1,44 @@
+import clf as clf
+import numpy as np
+import vect
 from flask import Flask, render_template, request, redirect, url_for
 # from wtforms import Form, TextAreaField, validators
 import pickle
 import os
 
+from gensim.parsing import remove_stopwords
+from google.protobuf.text_format import Tokenizer
+from keras_preprocessing.sequence import pad_sequences
+from nltk import WordNetLemmatizer
 
+# from tensorflow.keras.preprocessing.text import Tokenizer
+# from tensorflow.keras.preprocessing.sequence import pad_sequences
+from gensim.parsing.preprocessing import remove_stopwords
+import re
+from string import digits
+import string
+
+
+#
 # from vectorizer import vect
-
+from wtforms import TextAreaField, validators, Form
 
 app = Flask(__name__)
-""" Form Handling 
+""" Form Handling """
 
 
 cur_dir = os.path.dirname(__file__)
-cv = pickle.load(open(os.path.join(cur_dir,'pkl_objects','Personality_Prediction.pkl'), 'rb'))
+cv = pickle.load(open(os.path.join(cur_dir,'','Personality_Prediction.pkl'), 'rb'))
 
-
-class ReviewForm(Form):
-    personality = TextAreaField('',[validators.DataRequired(),validators.length(min=15)])
 def classify(document):
     label = {'INFJ', 'ENTP', 'INTP', 'INTJ', 'ENTJ', 'ENFJ', 'INFP', 'ENFP',
        'ISFP', 'ISTP', 'ISFJ', 'ISTJ', 'ESTP', 'ESFP', 'ESTJ', 'ESFJ'}
     X = vect.transform([document])
+    # Preprocess
+
     y = clf.predict(X)[0]
     proba = np.max(clf.predict_proba(X))
     return label[y], proba
-
-@app.route('/results', methods=['POST'])
-def results():
-    form = ReviewForm(request.form)
-    if request.method == 'POST' and form.validate():
-        personality = request.form['personality']
-        y, proba = classify(personality)
-        return render_template('results.html',content=personality,
-                                prediction=y,
-                                probability=round(proba*100, 2))
-    return render_template('personality.html', form=form)
-"""
 
 ######## Preparing the Classifier
 # cur_dir = os.path.dirname(__file__)
