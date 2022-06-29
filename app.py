@@ -1,34 +1,75 @@
 import clf as clf
 import numpy as np
 import vect
-from flask import Flask, render_template, request, redirect, url_for
-# from wtforms import Form, TextAreaField, validators
+from flask import render_template, request, redirect, url_for
 import pickle
 import os
-
-from gensim.parsing import remove_stopwords
-from google.protobuf.text_format import Tokenizer
-from keras_preprocessing.sequence import pad_sequences
-from nltk import WordNetLemmatizer
-
-# from tensorflow.keras.preprocessing.text import Tokenizer
-# from tensorflow.keras.preprocessing.sequence import pad_sequences
-from gensim.parsing.preprocessing import remove_stopwords
-import re
-from string import digits
-import string
-
-
-#
-# from vectorizer import vect
-from wtforms import TextAreaField, validators, Form
-
+from flask import Flask
 app = Flask(__name__)
-""" Form Handling """
-
-
+import os
+import pickle
+import re
+from flask import Flask, request, jsonify
+from nltk import WordNetLemmatizer
+from tqdm import tqdm
 cur_dir = os.path.dirname(__file__)
-cv = pickle.load(open(os.path.join(cur_dir,'','Personality_Prediction.pkl'), 'rb'))
+from sklearn.feature_extraction.text import HashingVectorizer
+import nltk
+nltk.download('omw-1.4')
+nltk.download('wordnet')
+from flask import Flask, request, jsonify
+
+
+""" Rest API """
+cv = pickle.load(open(os.path.join(cur_dir,'','model.pkl'), 'rb'))
+
+
+def clear_text(data):
+    data_length = []
+    lemmatizer = WordNetLemmatizer()
+    cleaned_text = []
+    for sentence in tqdm(data):
+        sentence = sentence.lower()
+
+        #         removing links from text data
+        sentence = re.sub('https?://[^\s<>"]+|www\.[^\s<>"]+', ' ', sentence)
+
+        #         removing other symbols
+        sentence = re.sub('[^0-9a-z]', ' ', sentence)
+
+        data_length.append(len(sentence.split()))
+        cleaned_text.append(sentence)
+    return cleaned_text
+
+
+def process(document):
+    document = clear_text(document)
+
+    class Lemmatizer(object):
+        def __init__(self):
+            self.lemmatizer = WordNetLemmatizer()
+
+        def __call__(self, sentence):
+            return [self.lemmatizer.lemmatize(word) for word in sentence.split() if len(word) > 2]
+
+    vectorizer = HashingVectorizer(n_features=5000)
+
+    post = vectorizer.transform(document).toarray()
+
+    return post
+
+
+@app.route('/api',methods=['POST'])
+def predict():
+    data = request.get_json(force=True)
+    output = cv.predict(process([data]))
+    map = {1: 'HCI', 2: 'ABC', 3: 'DEF', 4: 'GHI', 5: 'JKL', 6: 'BBB', 7: 'EEE', 8: 'FFGG',
+           9: 'AAAB', 10: 'LLL', 11: 'AAAA', 12: 'QQQ', 13: 'EEE', 14: 'AAA', 15: 'SSS', 16: 'GGG', }
+
+
+    print(map.get(output[0]))
+
+    return jsonify(map.get(output[0]))
 
 def classify(document):
     label = {'INFJ', 'ENTP', 'INTP', 'INTJ', 'ENTJ', 'ENFJ', 'INFP', 'ENFP',
@@ -36,41 +77,10 @@ def classify(document):
     X = vect.transform([document])
     # Preprocess
 
-    y = clf.predict(X)[0]
-    proba = np.max(clf.predict_proba(X))
+    y = cv.predict(X)[0]
+    proba = np.max(cv.predict_proba(X))
     return label[y], proba
 
-######## Preparing the Classifier
-# cur_dir = os.path.dirname(__file__)
-# clf = pickle.load(open(os.path.join(cur_dir,
-#                  'pkl_objects',
-#                  'classifier.pkl'), 'rb'))
-# db = os.path.join(cur_dir, 'reviews.sqlite')
-
-# def classify(document):
-#     label = {'negative': 'negative', 'positive': 'positive'}
-#     X = vect.transform([document])
-#     y = clf.predict(X)[0]
-#     proba = np.max(clf.predict_proba(X))
-#     return label[y], proba
-#
-# def train(document, y):
-#     X = vect.transform([document])
-#     clf.partial_fit(X, [y])
-#
-# def sqlite_entry(path, document, y):
-#     conn = sqlite3.connect(path)
-#     c = conn.cursor()
-#     c.execute("INSERT INTO review_db (review, sentiment, date)"\
-#     " VALUES (?, ?, DATETIME('now'))", (document, y))
-#     conn.commit()
-#     conn.close()
-#
-# ######## Flask
-# class ReviewForm(Form):
-#     moviereview = TextAreaField('',
-#                                 [validators.DataRequired(),
-#                                 validators.length(min=15)])
 
 @app.route('/')
 def index():
